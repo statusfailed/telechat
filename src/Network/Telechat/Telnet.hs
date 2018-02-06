@@ -1,4 +1,15 @@
-module Network.Telechat.Telnet where
+{-# LANGUAGE OverloadedStrings #-}
+module Network.Telechat.Telnet
+  ( telnet_SET_RAW_MODE
+  , telnetDataParser
+  ) where
+
+import Data.Maybe
+import Control.Applicative
+import Control.Monad
+
+import Data.Attoparsec.ByteString
+import Data.ByteString
 
 -- This module contains raw telnet commands (as bytes) which are used to put
 -- the client into "raw" mode, with no local echoing of characters.
@@ -12,28 +23,58 @@ module Network.Telechat.Telnet where
 -- and https://tools.ietf.org/html/rfc854
 -- and https://tools.ietf.org/html/rfc857
 
--- IAC DO LINEMODE
--- sender (us) requests the remote side 
--- "Begin subnegotiation of editing status" (P4, RFC1184)
-iac_do_linemode = "\xFF\xFD\x22"
-
--- IAC SB LINEMODE MODE 0
--- the "0" is a bitmask. By turning off everything, we basically tell
--- the client to be a dumb byte-entering-machine.
-iac_sb_linemode_mode_0 = "\xFF\xFA\x22\x01\x00"
-
--- IAC 240, page 14 https://tools.ietf.org/html/rfc854
--- "End of parameters"
-iac_se = "\xFF\xF0"
-
--- IAC WILL ECHO
--- "we'll output characters for this terminal, don't you worry!"
--- more or less instructs the client to stop echoing locally.
--- P1, RFC857
-iac_will_echo '\xFF\xFB\x01'
-
 -- Final command to set raw mode.
-telnet_SET_RAW_MODE
-  =  iac_do_linemode
-  <> iac_sb_linemode_mode_0 <> iac_se
-  <> iac_will_echo
+telnet_SET_RAW_MODE :: ByteString
+telnet_SET_RAW_MODE = pack
+  -- IAC DO LINEMODE
+  -- sender (us) requests the remote side
+  -- "Begin subnegotiation of editing status" (P4, RFC1184)
+  [ 255, 253, 34
+
+  -- IAC SB LINEMODE MODE 0
+  -- the "0" is a bitmask. By turning off everything, we basically tell
+  -- the client to be a dumb byte-entering-machine.
+  , 255, 250, 34, 1, 0
+
+  -- IAC 240, page 14 https://tools.ietf.org/html/rfc854
+  -- "End of parameters"
+  , 255, 240
+
+  -- IAC WILL ECHO
+  -- "we'll output characters for this terminal, don't you worry!"
+  -- more or less instructs the client to stop echoing locally.
+  -- P1, RFC857
+  , 255, 251, 1
+  ]
+
+
+-- sb is "begin subnegotiation"
+-- page 14, RF854: https://tools.ietf.org/html/rfc854
+iacSe = word8 255 >> word8 240 -- IAC SB
+
+-- | Read bytes until the IAC SE sequence is encountered
+untilIacSe :: Parser ()
+untilIacSe = do
+  takeWhile1 (/= 255)
+  void iacSe <|> void untilIacSe
+
+-- | Parse and ignore a telnet command
+telnetCommand :: Parser (Maybe ByteString)
+telnetCommand = do
+  word8 255 -- IAC
+  code <- anyWord8
+  case code of
+    255 -> return $ Just "\255" -- doubling up means a literal
+
+    -- SB is "begin subnegotiation" - so eat bytes until SE: end subng.
+    250 -> untilIacSe >> return Nothing
+
+    -- Other commands are just a single byte (sequence goes IAC, Code, Arg)
+    _   -> anyWord8 >> return Nothing
+
+rawData :: Parser (Maybe ByteString)
+rawData = Just <$> takeWhile1 (/= 255)
+
+-- | Parse raw data from a telnet connection, by ignoring all telnet commands.
+telnetDataParser :: Parser [ByteString]
+telnetDataParser = catMaybes <$> many' (telnetCommand <|> rawData)
