@@ -1,5 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Network.Telechat where
+module Network.Telechat
+  ( module Network.Telechat
+  , module Network.Telechat.Types
+  , module Network.Telechat.Telnet
+  , module Network.Telechat.Machines
+  ) where
 
 import Control.Exception.Base
 import Control.Monad
@@ -21,6 +26,10 @@ import Network.Socket
   )
 
 import Network.Socket.ByteString as Socket (sendAll, recv)
+
+import Network.Telechat.Types
+import Network.Telechat.Telnet
+import Network.Telechat.Machines
 
 recvBufSize :: Int
 recvBufSize = 2048

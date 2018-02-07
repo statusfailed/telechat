@@ -1,0 +1,77 @@
+-- This file has been generated from package.yaml by hpack version 0.20.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: bdd8a75074ced7a7883c2b1e2ed3caee9849b6cf31c703a114894168a3daab4d
+
+name:           telechat
+version:        0.1.0.0
+description:    Please see the README on Github at <https://github.com/statusfailed/telechat#readme>
+homepage:       https://github.com/statusfailed/telechat#readme
+bug-reports:    https://github.com/statusfailed/telechat/issues
+author:         Paul Wilson
+maintainer:     paul@statusfailed.com
+copyright:      2018 Paul Wilson
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+
+extra-source-files:
+    ChangeLog.md
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/statusfailed/telechat
+
+library
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , machines
+    , machines-attoparsec
+    , bytestring
+    , attoparsec
+    , distributed-process
+    , network-transport
+    , network-transport-tcp
+    , network
+  exposed-modules:
+      Network.Telechat
+      Network.Telechat.Telnet
+  other-modules:
+      Paths_telechat
+  default-language: Haskell2010
+
+executable telechat-exe
+  main-is: Main.hs
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , telechat
+    , distributed-process
+    , network-transport
+    , network-transport-tcp
+  other-modules:
+      Paths_telechat
+  default-language: Haskell2010
+
+test-suite telechat-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , telechat
+    , attoparsec
+    , tasty
+    , tasty-hunit
+  other-modules:
+      Paths_telechat
+  default-language: Haskell2010
