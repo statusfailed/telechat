@@ -31,8 +31,8 @@ strippingTelnet = parsingMaybe telnetDataParser ~> results ~> flattened
 
 -- | Read 'ByteString' input and produce 'Text' output as soon
 -- as possible.
-parsingText :: Monad m => ProcessT m ByteString Text
-parsingText = construct (go streamDecodeUtf8)
+decodingText :: Monad m => ProcessT m ByteString Text
+decodingText = construct (go streamDecodeUtf8)
   where
     go k = do
       (Some r _ k') <- k <$> await
@@ -53,5 +53,5 @@ readingMachine :: MonadIO m => Socket -> Int -> SourceT m Text
 readingMachine sock recvBufSize
   =  readingSocket sock recvBufSize
   ~> strippingTelnet
-  ~> parsingText
+  ~> decodingText
   {-~> parsingMaybe parseCommand-}

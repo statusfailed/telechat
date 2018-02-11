@@ -43,6 +43,7 @@ library
       Network.Telechat
       Network.Telechat.Telnet
       Network.Telechat.Machines
+      Network.Telechat.Commands
       Network.Telechat.Types
   other-modules:
       Paths_telechat
@@ -73,6 +74,7 @@ test-suite telechat-test
       base >=4.7 && <5
     , telechat
     , machines
+    , machines-attoparsec
     , bytestring
     , text
     , attoparsec
