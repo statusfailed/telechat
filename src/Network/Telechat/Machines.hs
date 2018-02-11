@@ -9,6 +9,9 @@ import Data.Machine.Attoparsec (parsingMaybe)
 import Data.ByteString as BS
 import Data.Attoparsec.ByteString
 
+import Data.Text
+import Data.Text.Encoding (Decoding(..), streamDecodeUtf8)
+
 import Network.Socket (Socket(..))
 import Network.Socket.ByteString as Socket (sendAll, recv)
 
@@ -26,12 +29,29 @@ strippingTelnet :: Monad m => ProcessT m ByteString ByteString
 strippingTelnet = parsingMaybe telnetDataParser ~> results ~> flattened
   where results = repeatedly (await >>= maybe mzero yield)
 
--- | The 'ProcessT' for a child socket-reading process.
--- 'readingMachine sock n' reads chunks of size 'n' from socket 'sock', and parses
--- out only raw client data, with no telnet commands.
-readingMachine :: MonadIO m => Socket -> Int -> SourceT m ByteString
-readingMachine sock recvBufSize = construct go ~> strippingTelnet
+-- | Read 'ByteString' input and produce 'Text' output as soon
+-- as possible.
+parsingText :: Monad m => ProcessT m ByteString Text
+parsingText = construct (go streamDecodeUtf8)
+  where
+    go k = do
+      (Some r _ k') <- k <$> await
+      yield r
+      go k'
+
+readingSocket :: MonadIO m => Socket -> Int -> SourceT m ByteString
+readingSocket sock recvBufSize = construct go
   where
     go = do
       r <- liftIO $ Socket.recv sock recvBufSize
       unless (BS.null r) $ yield r >> go
+
+-- | The 'ProcessT' for a child socket-reading process.
+-- 'readingMachine sock n' reads chunks of size 'n' from socket 'sock', and parses
+-- out only raw client data, with no telnet commands.
+readingMachine :: MonadIO m => Socket -> Int -> SourceT m Text
+readingMachine sock recvBufSize
+  =  readingSocket sock recvBufSize
+  ~> strippingTelnet
+  ~> parsingText
+  {-~> parsingMaybe parseCommand-}
