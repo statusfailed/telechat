@@ -7,13 +7,22 @@ import Test.Tasty.HUnit
 import Network.Telechat.Telnet (telnet_SET_RAW_MODE, telnetDataParser)
 import Data.Monoid
 import Data.Attoparsec.ByteString
+import qualified Data.ByteString as BS
+import qualified Data.Text as Text
+
+-- testParsingText
+import Data.Machine (run, supply)
+import Network.Telechat.Machines (parsingText)
 
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [parserTests]
+tests = testGroup "Tests"
+  [ testTelnetParser
+  , testParsingText
+  ]
 
-parserTests = testGroup "Parser unit tests"
+testTelnetParser = testGroup "Parser unit tests"
   [ testCase "Check simple telnet commands are stripped from input" $
       Right ["abc", "def"] @=? (parseOnly telnetDataParser $
         ("abc" <> "\255\240\1" <> "def"))
@@ -23,4 +32,9 @@ parserTests = testGroup "Parser unit tests"
   , testCase "Check 0xFF data bytes are preserved" $
       Right ["abc", "\255", "def"] @=? (parseOnly telnetDataParser $
         ("abc\255\255" <> telnet_SET_RAW_MODE <> "def"))
+  ]
+
+testParsingText = testGroup "Test parsing UTF-8"
+  [ testCase "Check parsingTelnet works with split unicode data snowman" $
+      "snowman: ☃" @=? (Text.concat . run $ supply ["snowman: \xe2", "\x98\x83"] parsingText)
   ]
