@@ -27,14 +27,16 @@ Implementation
   * [ ] Reader
     - [x] Discard telnet commands
     - [x] Parse UTF-8
-    - [ ] Interpret control codes (ESC, DEL, etc.)
-    - [ ] Filter remaining non-readable chars from chat messages
+    - [x] Interpret control codes (DEL, Enter, etc.)
+    - [x] Filter remaining non-readable chars from chat messages
     - [ ] Forward messages to Writer
+    - [ ] Write IO to wrap readingMachine
   * [ ] Writer
     - [ ] Update state of client terminal
     - [ ] Draw client terminal
     - [ ] Convert 'Text' messages to valid telnet data (simply encodeUtf8 - see
           Telnet/UTF-8 note below)
+    - [ ] Write IO to wrap writingMachine
 
 ## Telnet/UTF note
 

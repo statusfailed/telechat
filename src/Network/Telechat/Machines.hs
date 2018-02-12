@@ -4,10 +4,11 @@ module Network.Telechat.Machines where
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Machine
-import Data.Machine.Attoparsec (parsingMaybe)
+import Data.Machine.Attoparsec (parsingText, parsingMaybe)
 
 import Data.ByteString as BS
-import Data.Attoparsec.ByteString
+import qualified Data.Attoparsec.ByteString as ABS
+import qualified Data.Attoparsec.Text as AT
 
 import Data.Text
 import Data.Text.Encoding (Decoding(..), streamDecodeUtf8)
@@ -22,6 +23,16 @@ import Network.Socket.ByteString as Socket (sendAll, recv)
 --  message to sender, "ClientCommand Line"
 
 import Network.Telechat.Telnet (telnetDataParser)
+import Network.Telechat.Types
+import Network.Telechat.Commands
+
+-- | Read chunks of bytes from a sock. Ask for up to recvBufSize each time.
+readingSocket :: MonadIO m => Socket -> Int -> SourceT m ByteString
+readingSocket sock recvBufSize = construct go
+  where
+    go = do
+      r <- liftIO $ Socket.recv sock recvBufSize
+      unless (BS.null r) $ yield r >> go
 
 -- | A 'ProcessT' to read chunks of data, strip telnet commands from them, and
 -- produce only the raw data sent by the client.
@@ -39,19 +50,24 @@ decodingText = construct (go streamDecodeUtf8)
       yield r
       go k'
 
-readingSocket :: MonadIO m => Socket -> Int -> SourceT m ByteString
-readingSocket sock recvBufSize = construct go
-  where
-    go = do
-      r <- liftIO $ Socket.recv sock recvBufSize
-      unless (BS.null r) $ yield r >> go
+droppingLefts :: Monad m => ProcessT m (Either l r) r
+droppingLefts = repeatedly (await >>= go)
+  where go x = case x of
+          Left err -> return ()
+          Right v  -> yield v
+
+droppingNothings :: Monad m => ProcessT m (Maybe a) a
+droppingNothings = repeatedly (await >>= go)
+  where go x = case x of { Nothing -> stop; Just v -> yield v } 
 
 -- | The 'ProcessT' for a child socket-reading process.
 -- 'readingMachine sock n' reads chunks of size 'n' from socket 'sock', and parses
 -- out only raw client data, with no telnet commands.
-readingMachine :: MonadIO m => Socket -> Int -> SourceT m Text
+readingMachine :: MonadIO m => Socket -> Int -> SourceT m Command
 readingMachine sock recvBufSize
   =  readingSocket sock recvBufSize
   ~> strippingTelnet
   ~> decodingText
-  {-~> parsingMaybe parseCommand-}
+  ~> fmap AT.eitherResult (parsingText command)
+  ~> droppingLefts
+  ~> droppingNothings
