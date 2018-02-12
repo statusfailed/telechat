@@ -30,17 +30,20 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , transformers
     , machines
     , machines-attoparsec
     , bytestring
     , text
     , attoparsec
+    , binary
     , distributed-process
     , network-transport
     , network-transport-tcp
     , network
   exposed-modules:
       Network.Telechat
+      Network.Telechat.Terminal
       Network.Telechat.Telnet
       Network.Telechat.Machines
       Network.Telechat.Commands

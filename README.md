@@ -18,6 +18,10 @@ A telnet chat server using distributed-process
 
 # TODO
 
+Main issue: telnet parser outputs a list of bytestrings, so it will never
+terminate. Example: send a bunch of input to the server, then close your
+connection. Server will (belately) parse to 'Command', and output to terminal
+
 Implementation
 
 - [x] high level design
@@ -25,18 +29,19 @@ Implementation
   - [x] Client identity
 - [ ] Child processes
   * [ ] Reader
-    - [x] Discard telnet commands
+    - [ ] Discard telnet commands.
     - [x] Parse UTF-8
     - [x] Interpret control codes (DEL, Enter, etc.)
     - [x] Filter remaining non-readable chars from chat messages
-    - [ ] Forward messages to Writer
-    - [ ] Write IO to wrap readingMachine
-  * [ ] Writer
-    - [ ] Update state of client terminal
-    - [ ] Draw client terminal
-    - [ ] Convert 'Text' messages to valid telnet data (simply encodeUtf8 - see
+    - [x] Forward messages to Writer
+    - [x] Write IO to wrap readingMachine
+  * [x] Writer
+    - [x] Update state of client terminal
+    - [x] Broadcast 'Send' messages to other writers
+    - [x] Draw client terminal
+    - [x] Convert 'Text' messages to valid telnet data (simply encodeUtf8 - see
           Telnet/UTF-8 note below)
-    - [ ] Write IO to wrap writingMachine
+    - [x] Write IO to wrap writingMachine
 
 ## Telnet/UTF note
 

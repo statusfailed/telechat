@@ -9,6 +9,7 @@ module Network.Telechat
 import Control.Exception.Base
 import Control.Monad
 import Control.Concurrent (threadDelay)
+import Control.Monad.Trans.Class (lift)
 import Control.Monad (forever)
 import Data.IORef (IORef(..), readIORef, newIORef, modifyIORef)
 
@@ -16,6 +17,8 @@ import Network.Transport (Transport(..))
 import Network.Transport.TCP (createTransport, defaultTCPParameters)
 import Control.Distributed.Process
 import Control.Distributed.Process.Node
+
+import Data.Machine hiding (Process)
 
 import qualified Data.ByteString as BS
 
@@ -35,36 +38,44 @@ recvBufSize :: Int
 recvBufSize = 2048
 
 -- | Listen for data from a child socket; broadcast all data to other children.
-childReceiver :: IORef [ProcessId] -> Socket -> Process ()
-childReceiver cref sock = do
-  msg <- liftIO $ Socket.recv sock recvBufSize
-  -- if msg is null, the socket was closed.
-  unless (BS.null msg) $ do
-    say $ "got message from child " ++ show sock
-    children <- liftIO $ readIORef cref
-    forM_ children (\pid -> send pid msg)
-    childReceiver cref sock
+childReceiver :: ProcessId -> Socket -> Process ()
+childReceiver writerPid sock = runT_
+  $  readingSocket sock recvBufSize
+  ~> autoM (\buf -> say ("raw bytes: " ++ show buf) >> return buf)
+  ~> readingMachine
+  ~> autoM (\msg -> say ("got msg: " ++ show msg) >> return msg)
+  ~> autoM (send writerPid)
 
 -- | Listen for process messages and write to socket
-childSender :: Socket -> Process ()
-childSender sock = forever $ do
-  msg <- expect :: Process BS.ByteString
-  liftIO $ Socket.sendAll sock msg
+childSender :: IORef [ProcessId] -> Socket -> Process ()
+childSender allWriterPids sock = do
+  say "setting RAW mode"
+  liftIO $ Socket.sendAll sock telnet_SET_RAW_MODE
+  runT_
+    $  expecting
+    ~> autoM (\cmd -> say ("got command: " ++ show cmd) >> return cmd)
+    ~> writingMachine broadcast
+    ~> writingSocket sock
+  where
+    broadcast msg = liftIO (readIORef allWriterPids) >>= mapM_ (flip send msg)
+    expecting = repeatedly (lift (expect :: Process Command) >>= yield)
 
 -- | Spawn a pair of processes, reading and writing from a client socket connection
 -- respectively.
 -- The processes are linked, and will both die if one does.
 spawnChild :: IORef [ProcessId] -> (Socket, SockAddr) -> Process ()
 spawnChild cref (sock, _) = do
+  -- Create the sender process
   senderPid <- spawnLocal $ do
-    liftIO $ Socket.sendAll sock "welcome\n"
-    childSender sock
+    childSender cref sock
 
+  -- add the sender to the set of sender processes
   liftIO $ modifyIORef cref (\ps -> senderPid:ps)
 
+  -- create the receiver process
   receiverPid <- spawnLocal $ do
     link senderPid -- pair child processes so both die together
-    childReceiver cref sock
+    childReceiver senderPid sock
 
   return ()
 

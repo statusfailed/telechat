@@ -13,8 +13,8 @@ backspace = char (chr 0x7F) >> return Backspace
 
 send :: Parser Command
 send = do
-  char (chr 0x00)
   char (chr 0x0d)
+  char (chr 0x00)
   return Send
 
 -- | Strip unprintable characters from input.
