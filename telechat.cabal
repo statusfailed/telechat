@@ -52,7 +52,7 @@ library
       Paths_telechat
   default-language: Haskell2010
 
-executable telechat-exe
+executable telechat
   main-is: Main.hs
   hs-source-dirs:
       app

@@ -5,6 +5,7 @@ module Network.Telechat.Telnet
   , telnetDataParser
   ) where
 
+import Data.Word
 import Data.Maybe
 import Control.Applicative
 import Control.Monad
@@ -53,11 +54,14 @@ telnet_SET_RAW_MODE = pack
 -- page 14, RF854: https://tools.ietf.org/html/rfc854
 iacSe = word8 255 >> word8 240 -- IAC SB
 
+dataByte :: Parser Word8
+dataByte = word8 255 >> word8 255
+
 -- | Read bytes until the IAC SE sequence is encountered
 untilIacSe :: Parser ()
 untilIacSe = do
   takeWhile1 (/= 255)
-  void iacSe <|> void untilIacSe
+  void dataByte <|> void iacSe <|> void untilIacSe
 
 -- | Parse and ignore a telnet command
 telnetCommand :: Parser (Maybe ByteString)
@@ -65,7 +69,8 @@ telnetCommand = do
   word8 255 -- IAC
   code <- anyWord8
   case code of
-    255 -> return $ Just "\255" -- doubling up means a literal
+    -- doubling up means a literal 0xFF
+    255 -> return $ Just "\255"
 
     -- SB is "begin subnegotiation" - so eat bytes until SE: end subng.
     250 -> untilIacSe >> return Nothing

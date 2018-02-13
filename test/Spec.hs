@@ -37,6 +37,11 @@ tests = testGroup "Tests"
 rawModeResponse :: BS.ByteString
 rawModeResponse = "\255\253\ETX\255\251\"\255\250\"\ETX\SOH\NUL\NUL\ETXb\ETX\EOT\STX\SI\ENQ\NUL\NUL\ab\FS\b\STX\EOT\tB\SUB\n\STX\DEL\v\STX\NAK\SI\STX\DC1\DLE\STX\DC3\DC1\NUL\NUL\DC2\NUL\NUL\255\240\255\253\SOH"
 
+-- This is another command sequence from a slightly different telnet, but this
+-- one seems to break the server.
+rawModeResponse2 :: BS.ByteString
+rawModeResponse2 = "\255\253\ETX\255\251\"\255\250\"\ETX\SOH\NUL\NUL\ETXb\ETX\EOT\STX\SI\ENQ\NUL\NUL\ab\FS\b\STX\EOT\tB\SUB\n\STX\DEL\v\STX\NAK\SI\STX\DC1\DLE\STX\DC3\DC1\STX\255\255\DC2\STX\255\255\255\240\255\253\SOH"
+
 testTelnetParser = testGroup "Parser unit tests"
   [ testCase "Check simple telnet commands are stripped from input" $
       Right ["a", "b", "c", "d", "e", "f"] @=? (parseOnly telnetDataParser $
@@ -49,6 +54,8 @@ testTelnetParser = testGroup "Parser unit tests"
         ("abc\255\255" <> telnet_SET_RAW_MODE <> "def"))
   , testCase "Check raw mode response is stripped" $
       Right ["a", "b", "c"] @=? (parseOnly telnetDataParser $ rawModeResponse <> "abc")
+  , testCase "Check raw mode response 2 is stripped" $
+      Right ["a", "b", "c"] @=? (parseOnly telnetDataParser $ rawModeResponse2 <> "abc")
   ]
 
 testParsingText = testGroup "Test parsing UTF-8"
@@ -78,9 +85,10 @@ testReadingMachine = testGroup "Test the client reader machine"
       (run . supply ["\r\NUL" <> "abc"] $ readingMachine)
   ]
 
+-- TODO improve this test to not use the prompt text directly
 testWritingMachine = testGroup "Test editing works for clients"
   [ testCase "Basic test that backspace outputs correct ANSI sequence" $ 
-      "abcd\ESC[\NULKabc"
+      "say something > abcd\r\ESC[\NULKsay something > abc"
       @=?
       (BS.concat . run . supply [Input "abcd", Backspace] $
         writingMachine (const $ return ()))
