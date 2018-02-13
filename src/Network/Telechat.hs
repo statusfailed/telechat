@@ -41,9 +41,7 @@ recvBufSize = 2048
 childReceiver :: ProcessId -> Socket -> Process ()
 childReceiver writerPid sock = runT_
   $  readingSocket sock recvBufSize
-  ~> autoM (\buf -> say ("raw bytes: " ++ show buf) >> return buf)
   ~> readingMachine
-  ~> autoM (\msg -> say ("got msg: " ++ show msg) >> return msg)
   ~> autoM (send writerPid)
 
 -- | Listen for process messages and write to socket
@@ -53,12 +51,14 @@ childSender allWriterPids sock = do
   liftIO $ Socket.sendAll sock telnet_SET_RAW_MODE
   runT_
     $  expecting
-    ~> autoM (\cmd -> say ("got command: " ++ show cmd) >> return cmd)
     ~> writingMachine broadcast
     ~> writingSocket sock
   where
-    broadcast msg = liftIO (readIORef allWriterPids) >>= mapM_ (flip send msg)
     expecting = repeatedly (lift (expect :: Process Command) >>= yield)
+
+    broadcast msg = do
+      pids <- liftIO (readIORef allWriterPids)
+      mapM_ (flip send $ Chat msg) pids
 
 -- | Spawn a pair of processes, reading and writing from a client socket connection
 -- respectively.

@@ -27,12 +27,10 @@ import Network.Socket.ByteString as Socket (sendAll, recv)
 --  feed line parser, emit lines
 --  message to sender, "ClientCommand Line"
 
-import Network.Telechat.Telnet (telnetDataParser)
+import Network.Telechat.Telnet (telnetData)
 import Network.Telechat.Types
 import Network.Telechat.Commands
 import qualified Network.Telechat.Terminal as Terminal
-
-import Debug.Trace (trace)
 
 -- | Read chunks of bytes from a sock. Ask for up to recvBufSize each time.
 readingSocket :: MonadIO m => Socket -> Int -> SourceT m ByteString
@@ -50,9 +48,8 @@ writingSocket sock = repeatedly (await >>= liftIO . Socket.sendAll sock)
 -- | A 'ProcessT' to read chunks of data, strip telnet commands from them, and
 -- produce only the raw data sent by the client.
 strippingTelnet :: Monad m => ProcessT m ByteString ByteString
-strippingTelnet = parsingMaybe telnetDataParser ~> debugging ~> results ~> flattened
+strippingTelnet = parsingMaybe telnetData ~> results ~> flattened
   where
-    debugging = mapping (\x -> trace ("debug: " ++ show x) x)
     results = repeatedly (await >>= maybe mzero yield)
 
 -- | Read 'ByteString' input and produce 'Text' output as soon
@@ -80,11 +77,8 @@ droppingNothings = repeatedly (await >>= go)
 -- out only raw client data, with no telnet commands.
 readingMachine :: Monad m => ProcessT m ByteString Command
 readingMachine
-  =  mapping (\x -> trace ("raw: " ++ show x) x)
-  ~> strippingTelnet
-  ~>  mapping (\x -> trace ("stripped: " ++ show x) x)
+  =  strippingTelnet
   ~> decodingText
-  ~>  mapping (\x -> trace ("decoded: " ++ show x) x)
   ~> fmap AT.eitherResult (parsingText command)
   ~> droppingLefts
   ~> droppingNothings
@@ -97,8 +91,10 @@ readingMachine
 -- NOTE: this is pretty inefficient - lots of 'Text' appending.
 -- TODO: use a decent editor data-structure.
 writingMachine :: Monad m => (Text -> m ()) -> ProcessT m Command ByteString
-writingMachine broadcast = construct $ (go mempty)
+writingMachine broadcast = construct (yield greeting >> go mempty)
   where
+    greeting = "say something > "
+
     go (WriterState buf) = do
       cmd <- await
       case cmd of
@@ -118,6 +114,7 @@ writingMachine broadcast = construct $ (go mempty)
     -- Re-render the current client screen.
     render buf = do
       yield Terminal.wipeLine
+      yield greeting
       yield (encodeUtf8 buf)
 
     -- "Chat" uses terminal codes to...

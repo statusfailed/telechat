@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Network.Telechat.Telnet
   ( telnet_SET_RAW_MODE
+  , telnetData
   , telnetDataParser
   ) where
 
@@ -9,7 +10,7 @@ import Control.Applicative
 import Control.Monad
 
 import Data.Attoparsec.ByteString
-import Data.ByteString
+import Data.ByteString as BS
 
 -- This module contains raw telnet commands (as bytes) which are used to put
 -- the client into "raw" mode, with no local echoing of characters.
@@ -73,8 +74,11 @@ telnetCommand = do
     _   -> anyWord8 >> return Nothing
 
 rawData :: Parser (Maybe ByteString)
-rawData = Just <$> takeWhile1 (/= 255)
+rawData = Just . BS.singleton <$> satisfy (/= 255)
+
+telnetData :: Parser (Maybe ByteString)
+telnetData = telnetCommand <|> rawData
 
 -- | Parse raw data from a telnet connection, by ignoring all telnet commands.
 telnetDataParser :: Parser [ByteString]
-telnetDataParser = catMaybes <$> many' (telnetCommand <|> rawData)
+telnetDataParser = catMaybes <$> many' telnetData

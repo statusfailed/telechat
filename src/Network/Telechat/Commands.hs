@@ -1,7 +1,7 @@
 module Network.Telechat.Commands where
 
 import Data.Char
-import Data.Text
+import Data.Text as Text
 import Control.Applicative
 import Data.Attoparsec.Text
 
@@ -24,7 +24,7 @@ unreadable = takeWhile1 (not . isPrint) >> return Nothing
 
 -- | Parse 'Input' - printable characters
 input :: Parser Command
-input = Input <$> takeWhile1 isPrint
+input = Input . Text.singleton <$> satisfy isPrint
 
 -- | Try to parse a command
 command :: Parser (Maybe Command)

@@ -39,16 +39,16 @@ rawModeResponse = "\255\253\ETX\255\251\"\255\250\"\ETX\SOH\NUL\NUL\ETXb\ETX\EOT
 
 testTelnetParser = testGroup "Parser unit tests"
   [ testCase "Check simple telnet commands are stripped from input" $
-      Right ["abc", "def"] @=? (parseOnly telnetDataParser $
+      Right ["a", "b", "c", "d", "e", "f"] @=? (parseOnly telnetDataParser $
         ("abc" <> "\255\240\1" <> "def"))
   , testCase "Check simple telnet commands are stripped from input" $
-      Right ["abc", "def"] @=? (parseOnly telnetDataParser $
+      Right ["a", "b", "c", "d", "e", "f"] @=? (parseOnly telnetDataParser $
         ("abc" <> telnet_SET_RAW_MODE <> "def"))
   , testCase "Check 0xFF data bytes are preserved" $
-      Right ["abc", "\255", "def"] @=? (parseOnly telnetDataParser $
+      Right ["a", "b", "c", "\255", "d", "e", "f"] @=? (parseOnly telnetDataParser $
         ("abc\255\255" <> telnet_SET_RAW_MODE <> "def"))
   , testCase "Check raw mode response is stripped" $
-      Right ["abc"] @=? (parseOnly telnetDataParser $ rawModeResponse <> "abc")
+      Right ["a", "b", "c"] @=? (parseOnly telnetDataParser $ rawModeResponse <> "abc")
   ]
 
 testParsingText = testGroup "Test parsing UTF-8"
@@ -58,22 +58,22 @@ testParsingText = testGroup "Test parsing UTF-8"
 
 testParsingCommands = testGroup "Test parsing commands from UTF-8 strings"
   [ testCase "Parse test sequence" $ 
-      Right [Just (Input "hi."), Just Backspace, Just Send, Nothing, Just (Input ".")]
+      Right [Just (Input "!"), Just Backspace, Just Send, Nothing, Just (Input ".")]
       @=?
-      (sequence . run $ supply (["hi.\x7F\x0d\x00\x03\x04." :: Text.Text]) (AT.eitherResult <$> parsingText command))
+      (sequence . run $ supply (["!\x7F\x0d\x00\x03\x04." :: Text.Text]) (AT.eitherResult <$> parsingText command))
   , testCase "parse split-up test sequence" $ 
-      Right [Just (Input "hi."), Just Backspace, Just Send, Nothing, Just (Input ".")]
+      Right [Just (Input "!"), Just Backspace, Just Send, Nothing, Just (Input ".")]
       @=?
-      (sequence . run $ supply (["hi.\x7F\x0d" :: Text.Text, "\x00\x03", "\x04."]) (AT.eitherResult <$> parsingText command))
+      (sequence . run $ supply (["!\x7F\x0d" :: Text.Text, "\x00\x03", "\x04."]) (AT.eitherResult <$> parsingText command))
   ]
 
 testReadingMachine = testGroup "Test the client reader machine"
   [ testCase "Check the raw mode response + input results in a command" $ 
-      [Input "abc"]
+      [Input "a", Input "b", Input "c"]
       @=?
       (run . supply [rawModeResponse <> "abc"] $ readingMachine)
   , testCase "Check simple newlines are correct" $ 
-      [Send, Input "abc"]
+      [Send, Input "a", Input "b", Input "c"]
       @=?
       (run . supply ["\r\NUL" <> "abc"] $ readingMachine)
   ]
