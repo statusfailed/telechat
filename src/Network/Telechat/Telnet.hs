@@ -38,7 +38,7 @@ telnet_SET_RAW_MODE = pack
   -- the client to be a dumb byte-entering-machine.
   , 255, 250, 34, 1, 0
 
-  -- IAC 240, page 14 https://tools.ietf.org/html/rfc854
+  -- IAC SE (240), page 14 https://tools.ietf.org/html/rfc854
   -- "End of parameters"
   , 255, 240
 
@@ -52,6 +52,7 @@ telnet_SET_RAW_MODE = pack
 
 -- sb is "begin subnegotiation"
 -- page 14, RF854: https://tools.ietf.org/html/rfc854
+iacSe :: Parser Word8
 iacSe = word8 255 >> word8 240 -- IAC SB
 
 dataByte :: Parser Word8
@@ -61,7 +62,9 @@ dataByte = word8 255 >> word8 255
 untilIacSe :: Parser ()
 untilIacSe = do
   takeWhile1 (/= 255)
-  void dataByte <|> void iacSe <|> void untilIacSe
+  -- if the 255 byte is a data byte, ignore it.
+  option () $ void dataByte
+  void iacSe <|> untilIacSe
 
 -- | Parse and ignore a telnet command
 telnetCommand :: Parser (Maybe ByteString)
@@ -76,6 +79,7 @@ telnetCommand = do
     250 -> untilIacSe >> return Nothing
 
     -- Other commands are just a single byte (sequence goes IAC, Code, Arg)
+    -- e.g., ignores "DO" and "DON'T" codes 253 and 254
     _   -> anyWord8 >> return Nothing
 
 rawData :: Parser (Maybe ByteString)
