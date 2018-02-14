@@ -1,6 +1,32 @@
 # telechat
 
-A telnet chat server using distributed-process
+A telnet chat server using distributed-process.
+
+Build and run:
+
+    stack build
+    stack exec telechat
+
+Connect:
+
+    telnet localhost 4444
+    sf@mymachine>telnet localhost 4444
+		Trying 127.0.0.1...
+		Connected to localhost.
+		Escape character is '^]'.
+		hello!
+		this is a message from someone else!
+		say something > why haven't I added identity yet? laziness.
+
+TODO:
+
+* Command line options to select port
+* Identity/Authentication
+* Connection limits / spam filtering?
+* Better line editing
+	- Ctrl+w (rubout)
+	- Ctrl+c (clear line)
+	- No sending of blank lines
 
 # design
 
@@ -10,7 +36,7 @@ A telnet chat server using distributed-process
     - parse remaining data to UTF-8
     - Interprets and control codes / removes unreadables from
       stream of client data.
-  * the "writer" process 
+  * the "writer" process
     - Receives commands from child reader
     - Renders the child's terminal
     - Receives chat messages from other clients
