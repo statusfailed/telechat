@@ -20,7 +20,7 @@ send = do
 -- | Strip unprintable characters from input.
 -- Always returns nothing if unprintable characters are parsed.
 unreadable :: Parser (Maybe a)
-unreadable = takeWhile1 (not . isPrint) >> return Nothing
+unreadable = satisfy (not . isPrint) >> return Nothing
 
 -- | Parse 'Input' - printable characters
 input :: Parser Command

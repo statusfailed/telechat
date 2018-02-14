@@ -23,9 +23,9 @@ Implementation
 - [x] high level design
   - [x] Reader/Writer
   - [x] Client identity
-- [ ] Child processes
-  * [ ] Reader
-    - [ ] Discard telnet commands.
+- [x] Child processes
+  * [x] Reader
+    - [x] Discard telnet commands.
     - [x] Parse UTF-8
     - [x] Interpret control codes (DEL, Enter, etc.)
     - [x] Filter remaining non-readable chars from chat messages
@@ -38,9 +38,22 @@ Implementation
     - [x] Convert 'Text' messages to valid telnet data (simply encodeUtf8 - see
           Telnet/UTF-8 note below)
     - [x] Write IO to wrap writingMachine
-    - [ ] Test that messages displayed on local terminal as well as remote
-    - [ ] Test that "Chat" message is broadcast - refactor so Chat isn't added
-          in Telechat.hs IO code?
+    - [x] Test that messages displayed on local terminal as well as remote
+
+Refactoring
+
+- [ ] Test that "Chat" message is broadcast - refactor so Chat isn't added
+      in Telechat.hs IO code
+
+TODO: regression tests - already fixed, but make sure they don't break again.
+
+- [ ] Reader/Writer dying means other process also dies (seems broken?)
+- [ ] Backspace on empty buffer
+- [ ] Unreadable characters don't crash client
+- [ ] Property based tests!
+  - [ ] Check all combinations of valid + invalid inputs
+  - [ ] Service does not drop input
+  - [ ] Service does not hang (i.e. stopping machines!)
 
 ## Telnet/UTF note
 

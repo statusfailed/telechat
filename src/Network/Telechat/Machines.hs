@@ -32,6 +32,23 @@ import Network.Telechat.Types
 import Network.Telechat.Commands
 import qualified Network.Telechat.Terminal as Terminal
 
+import Debug.Trace (trace)
+
+-- | Print every value going through the machine, and append a fixed message to
+-- the start (can be empty string)
+printing :: MonadIO m => Show a => String -> ProcessT m a a
+printing = autoM . f
+  where
+    f msg x = do
+      liftIO . Prelude.putStrLn $ msg ++ show x
+      return x
+
+-- | Debug.Trace.trace every value going through the pipeline with a fixed
+-- message prepended.
+tracing :: (Monad m, Show a) => String -> ProcessT m a a
+tracing = mapping . f
+  where f msg x = trace (msg ++ show x) x
+
 -- | Read chunks of bytes from a sock. Ask for up to recvBufSize each time.
 readingSocket :: MonadIO m => Socket -> Int -> SourceT m ByteString
 readingSocket sock recvBufSize = construct go
@@ -70,7 +87,7 @@ droppingLefts = repeatedly (await >>= go)
 
 droppingNothings :: Monad m => ProcessT m (Maybe a) a
 droppingNothings = repeatedly (await >>= go)
-  where go x = case x of { Nothing -> stop; Just v -> yield v } 
+  where go x = case x of { Nothing -> return (); Just v -> yield v }
 
 -- | The 'ProcessT' for a child socket-reading process.
 -- 'readingMachine sock n' reads chunks of size 'n' from socket 'sock', and parses
@@ -101,7 +118,7 @@ writingMachine broadcast = construct (yield greeting >> go mempty)
         Chat text  -> chat text >> render buf >> go (WriterState buf)
         Input text -> input text >> go (WriterState $ buf <> text)
         Send       -> send buf >> go (WriterState Text.empty)
-        Backspace  -> let buf' = Text.init buf
+        Backspace  -> let buf' = if Text.null buf then "" else Text.init buf
                       in render buf' >> go (WriterState buf')
 
     send buf = do
