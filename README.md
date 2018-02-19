@@ -72,11 +72,11 @@ Performance
 
 Better line editing
 
-- [ ] Purify code?
-- [ ] No sending of blank lines
+- [x] No sending of blank lines
 - [x] ctrl+c clears line
 - [ ] ctrl+w "readline"-ish rubout behaviour
-- [ ] ctrl+l clears buffer (may have to implement more telnet!)
+- [ ] ctrl+l clears screen (may have to implement more telnet!)
+- [ ] Purify editing code?
 
 Refactoring
 

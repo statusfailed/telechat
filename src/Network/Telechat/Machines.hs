@@ -124,9 +124,11 @@ writingMachine broadcast = construct (yield greeting >> go mempty)
 
     clear = render Text.empty >> go (WriterState Text.empty)
 
+    -- Send the current buffer, unless it's empty.
     send buf = do
-      lift (broadcast buf)
-      yield Terminal.wipeLine
+      unless (Text.null buf) $ do
+        lift (broadcast buf)
+        yield Terminal.wipeLine
 
     input text = do
       yield (encodeUtf8 text)
