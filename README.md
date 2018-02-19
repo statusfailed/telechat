@@ -24,11 +24,8 @@ TODO:
 * Identity/Authentication
 * Connection limits / spam filtering?
 * Better line editing
-	- Ctrl+w (rubout)
-	- Ctrl+c (clear line)
-	- No sending of blank lines
 
-# design
+# Design
 
 * Each socket connection spawns a pair of child processes
   * the "reader" process
@@ -66,6 +63,21 @@ Implementation
     - [x] Write IO to wrap writingMachine
     - [x] Test that messages displayed on local terminal as well as remote
 
+Performance
+
+- [ ] Place limits on client input buffers
+      (don't want to allow clients to DoS via unbounded input size)
+- [ ] Use a more appropriate datastructure for editing text
+- [ ] Reconsider use of Attoparsec for parsing?
+
+Better line editing
+
+- [ ] Purify code?
+- [ ] No sending of blank lines
+- [x] ctrl+c clears line
+- [ ] ctrl+w "readline"-ish rubout behaviour
+- [ ] ctrl+l clears buffer (may have to implement more telnet!)
+
 Refactoring
 
 - [ ] Test that "Chat" message is broadcast - refactor so Chat isn't added
@@ -76,6 +88,7 @@ TODO: regression tests - already fixed, but make sure they don't break again.
 - [ ] Reader/Writer dying means other process also dies (seems broken?)
 - [ ] Backspace on empty buffer
 - [ ] Unreadable characters don't crash client
+- [ ] Test line clearing (ctrl+c) works (it does, but tessttttssss)
 - [ ] Property based tests!
   - [ ] Check all combinations of valid + invalid inputs
   - [ ] Service does not drop input

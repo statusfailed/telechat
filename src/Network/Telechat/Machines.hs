@@ -120,6 +120,9 @@ writingMachine broadcast = construct (yield greeting >> go mempty)
         Send       -> send buf >> go (WriterState Text.empty)
         Backspace  -> let buf' = if Text.null buf then "" else Text.init buf
                       in render buf' >> go (WriterState buf')
+        Clear      -> clear
+
+    clear = render Text.empty >> go (WriterState Text.empty)
 
     send buf = do
       lift (broadcast buf)

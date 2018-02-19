@@ -17,6 +17,11 @@ send = do
   char (chr 0x00)
   return Send
 
+-- | Parse a "Clear" command.
+-- the telnet client (on my machine) sends this as 0x03.
+clear :: Parser Command
+clear = char (chr 0x03) >> return Clear
+
 -- | Strip unprintable characters from input.
 -- Always returns nothing if unprintable characters are parsed.
 unreadable :: Parser (Maybe a)
@@ -31,5 +36,6 @@ command :: Parser (Maybe Command)
 command
   =   fmap Just backspace
   <|> fmap Just send
+  <|> fmap Just clear
   <|> unreadable
   <|> fmap Just input

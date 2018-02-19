@@ -18,6 +18,8 @@ data Command
   | Backspace
   -- ^ Backspace signals the intention to delete the last character in the
   -- buffer.
+  | Clear
+  -- ^ Clear the buffer.
   deriving(Eq, Ord, Read, Show, Generic)
 
 instance Binary Command
